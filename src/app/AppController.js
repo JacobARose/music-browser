@@ -22,6 +22,7 @@ export class AppController {
       dataset: "random",
       key: "C",
       scale: "major",
+      pitchBend: 0,
     };
 
     this.pointCloudView = new PointCloudView(this.sceneManager.scene);
@@ -32,6 +33,7 @@ export class AppController {
     });
 
     this.hoverInteraction.attachMouseListener();
+    this.hoverInteraction.attachPointerListeners(this.sceneManager.renderer.domElement);
     this.hoverInteraction.setOnPointChange((point) => {
       this.pointCloudView.highlightPoint(point);
       if (point) {
@@ -39,14 +41,35 @@ export class AppController {
       }
     });
 
-    this.controlPanel = new ControlPanel((nextState) => {
-      this.controlState = nextState;
-      this.loadPoints();
+    this.hoverInteraction.setOnPointerPointChange(({ pointerId, point }) => {
+      const voiceId = `pointer-${pointerId}`;
+      if (point) {
+        this.audioEngine.play(point.sound, voiceId);
+        return;
+      }
+      this.audioEngine.stop(voiceId);
     });
+
+    this.controlPanel = new ControlPanel(this.onControlPanelChange);
   }
+
+  onControlPanelChange = (nextState) => {
+    const hasPointConfigChanged =
+      nextState.dataset !== this.controlState.dataset ||
+      nextState.key !== this.controlState.key ||
+      nextState.scale !== this.controlState.scale;
+
+    this.controlState = nextState;
+    this.audioEngine.setPitchBend(this.controlState.pitchBend);
+
+    if (hasPointConfigChanged) {
+      this.loadPoints();
+    }
+  };
 
   async start() {
     await this.audioEngine.init();
+    this.audioEngine.setPitchBend(this.controlState.pitchBend);
     await this.loadPoints();
     this.animate();
   }

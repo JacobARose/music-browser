@@ -21,19 +21,24 @@ export class ControlPanel {
         label: scaleName,
       }))
     );
+    this.pitchWheel = this.createPitchWheel();
 
     this.datasetSelect.value = "random";
     this.keySelect.value = "C";
     this.scaleSelect.value = "major";
+    this.pitchWheel.slider.value = "0";
+    this.pitchWheel.valueDisplay.textContent = "0.00 st";
 
     this.root.appendChild(this.datasetSelect.parentElement);
     this.root.appendChild(this.keySelect.parentElement);
     this.root.appendChild(this.scaleSelect.parentElement);
+    this.root.appendChild(this.pitchWheel.container);
     document.body.appendChild(this.root);
 
     this.datasetSelect.addEventListener("change", this.emitChange);
     this.keySelect.addEventListener("change", this.emitChange);
     this.scaleSelect.addEventListener("change", this.emitChange);
+    this.pitchWheel.slider.addEventListener("input", this.handlePitchBendInput);
 
     this.updateVisibility();
   }
@@ -54,6 +59,42 @@ export class ControlPanel {
     return select;
   }
 
+  createPitchWheel() {
+    const container = document.createElement("div");
+    container.className = "pitch-wheel";
+
+    const label = document.createElement("label");
+    label.textContent = "Pitch Bend";
+
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = "-2";
+    slider.max = "2";
+    slider.step = "0.01";
+    slider.value = "0";
+    slider.className = "pitch-bend-slider";
+
+    const valueDisplay = document.createElement("span");
+    valueDisplay.className = "pitch-bend-value";
+    valueDisplay.textContent = "0.00 st";
+
+    label.appendChild(slider);
+    container.appendChild(label);
+    container.appendChild(valueDisplay);
+
+    return {
+      container,
+      slider,
+      valueDisplay,
+    };
+  }
+
+  handlePitchBendInput = () => {
+    const value = parseFloat(this.pitchWheel.slider.value);
+    this.pitchWheel.valueDisplay.textContent = `${value.toFixed(2)} st`;
+    this.emitChange();
+  };
+
   emitChange = () => {
     this.updateVisibility();
     this.onChange(this.getValue());
@@ -70,6 +111,7 @@ export class ControlPanel {
       dataset: this.datasetSelect.value,
       key: this.keySelect.value,
       scale: this.scaleSelect.value,
+      pitchBend: parseFloat(this.pitchWheel.slider.value),
     };
   }
 }

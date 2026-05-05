@@ -8,6 +8,7 @@ body {
 
 canvas {
   display: block;
+  touch-action: none;
 }
 
 .overlay {
@@ -48,4 +49,27 @@ select {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+#control-panel .pitch-wheel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+#control-panel .pitch-wheel label {
+  width: 100%;
+}
+
+#control-panel .pitch-bend-slider {
+  width: 120px;
+  margin-top: 8px;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+#control-panel .pitch-bend-value {
+  font-size: 0.8rem;
+  white-space: nowrap;
 }

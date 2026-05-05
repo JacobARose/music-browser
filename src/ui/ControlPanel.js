@@ -71,6 +71,7 @@ this.root.id = "control-panel";
     this.pitchRangeSelect.value = "2";
     this.pitchWheel.slider.value = "0";
     this.pitchWheel.valueDisplay.textContent = "0.00 st";
+    this.decayTimeSelect.value = "0.5";
 
     const headerRow = document.createElement("div");
     headerRow.className = "control-header";
@@ -85,7 +86,7 @@ this.root.id = "control-panel";
     buttonRow.appendChild(this.lockNavigationButton);
     buttonRow.appendChild(this.sustainButton);
 
-    this.collapsible = document.createElement("div");
+this.collapsible = document.createElement("div");
     this.collapsible.className = "control-collapsible";
     this.collapsible.hidden = !this.isMenuOpen;
 
@@ -114,6 +115,7 @@ this.root.id = "control-panel";
     this.collapsible.appendChild(modeSection);
     this.collapsible.appendChild(pitchSettingsSection);
     this.collapsible.appendChild(decaySection);
+    this.collapsible.appendChild(decaySection);
 
     this.root.appendChild(headerRow);
     this.root.appendChild(buttonRow);
@@ -128,6 +130,7 @@ this.root.id = "control-panel";
     this.pitchRangeSelect.addEventListener("change", this.handlePitchRangeChange);
     this.autoReturnCheckbox.addEventListener("change", this.handleAutoReturnChange);
     this.returnTimeSelect.addEventListener("change", this.emitChange);
+    this.decayTimeSelect.addEventListener("change", this.emitChange);
     this.decayTimeSelect.addEventListener("change", this.emitChange);
     this.pitchWheel.slider.addEventListener("input", this.handlePitchBendInput);
     this.pitchWheel.slider.addEventListener("pointerup", this.handlePitchWheelRelease);

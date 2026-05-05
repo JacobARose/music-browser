@@ -28,6 +28,7 @@ export class AppController {
       pitchAutoReturn: true,
       rotationLocked: false,
       sustain: false,
+      noteDecayTime: 0.5,
     };
 
     this.pointCloudView = new PointCloudView(this.sceneManager.scene);
@@ -61,7 +62,7 @@ export class AppController {
       }
 
       if (!this.controlState.sustain) {
-        this.audioEngine.stop(voiceId);
+        this.audioEngine.stop(voiceId, this.controlState.noteDecayTime);
       }
     });
 
@@ -87,7 +88,7 @@ export class AppController {
 
     if (sustainReleased) {
       this.sustainedVoiceIds.forEach((voiceId) => {
-        this.audioEngine.stop(voiceId);
+        this.audioEngine.stop(voiceId, this.controlState.noteDecayTime);
       });
       this.sustainedVoiceIds.clear();
     }

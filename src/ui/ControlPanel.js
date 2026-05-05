@@ -4,7 +4,7 @@ export class ControlPanel {
   constructor(onChange) {
     this.onChange = onChange;
     this.root = document.createElement("div");
-    this.root.id = "control-panel";
+this.root.id = "control-panel";
     this.isMenuOpen = true;
 
     this.datasetSelect = this.createSelect("Dataset", [
@@ -31,7 +31,8 @@ export class ControlPanel {
       { value: "12", label: "+/- 12 st" },
       { value: "24", label: "+/- 24 st" },
     ]);
-this.autoReturnCheckbox = document.createElement("input");
+
+    this.autoReturnCheckbox = document.createElement("input");
     this.autoReturnCheckbox.type = "checkbox";
     this.autoReturnCheckbox.checked = true;
     this.autoReturnLabel = document.createElement("label");
@@ -93,14 +94,26 @@ this.autoReturnCheckbox = document.createElement("input");
       this.keySelect.parentElement,
       this.scaleSelect.parentElement,
     ]);
-     const pitchSettingsSection = this.createSection("Pitch Bend Wheel", [
-       this.autoReturnLabel,
-       this.returnTimeSelect.parentElement,
-       this.pitchRangeSelect.parentElement,
-     ]);
+    const pitchSettingsSection = this.createSection("Pitch Bend Wheel", [
+      this.autoReturnLabel,
+      this.returnTimeSelect.parentElement,
+      this.pitchRangeSelect.parentElement,
+    ]);
+
+    this.decayTimeSelect = this.createSelect("Note Decay (s)", [
+      { value: "0.5", label: "0.5 s" },
+      { value: "1.0", label: "1.0 s" },
+      { value: "1.5", label: "1.5 s" },
+      { value: "2.0", label: "2.0 s" },
+    ]);
+    this.decayTimeSelect.value = "0.5";
+    const decaySection = this.createSection("Note Decay (Sustain Off)", [
+      this.decayTimeSelect.parentElement,
+    ]);
 
     this.collapsible.appendChild(modeSection);
     this.collapsible.appendChild(pitchSettingsSection);
+    this.collapsible.appendChild(decaySection);
 
     this.root.appendChild(headerRow);
     this.root.appendChild(buttonRow);
@@ -115,6 +128,7 @@ this.autoReturnCheckbox = document.createElement("input");
     this.pitchRangeSelect.addEventListener("change", this.handlePitchRangeChange);
     this.autoReturnCheckbox.addEventListener("change", this.handleAutoReturnChange);
     this.returnTimeSelect.addEventListener("change", this.emitChange);
+    this.decayTimeSelect.addEventListener("change", this.emitChange);
     this.pitchWheel.slider.addEventListener("input", this.handlePitchBendInput);
     this.pitchWheel.slider.addEventListener("pointerup", this.handlePitchWheelRelease);
     this.pitchWheel.slider.addEventListener("pointercancel", this.handlePitchWheelRelease);
@@ -211,7 +225,7 @@ this.autoReturnCheckbox = document.createElement("input");
     this.emitChange();
   };
 
-  handleSustainToggle = () => {
+handleSustainToggle = () => {
     this.sustainActive = !this.sustainActive;
     this.sustainButton.textContent = this.sustainActive
       ? this.sustainButton.dataset.activeText
@@ -219,7 +233,7 @@ this.autoReturnCheckbox = document.createElement("input");
     this.emitChange();
   };
 
-   handlePitchRangeChange = () => {
+  handlePitchRangeChange = () => {
      const range = parseFloat(this.pitchRangeSelect.value);
      const slider = this.pitchWheel.slider;
      slider.min = String(-range);
@@ -294,23 +308,24 @@ handlePitchWheelRelease = () => {
     this.onChange(this.getValue());
   };
 
-  updateVisibility() {
+updateVisibility() {
     const isKeyScale = this.datasetSelect.value === "keyScale";
     this.keySelect.parentElement.style.display = isKeyScale ? "flex" : "none";
     this.scaleSelect.parentElement.style.display = isKeyScale ? "flex" : "none";
   }
 
-   getValue() {
-     return {
-       dataset: this.datasetSelect.value,
-       key: this.keySelect.value,
-       scale: this.scaleSelect.value,
-       pitchBend: parseFloat(this.pitchWheel.slider.value),
-       pitchRange: parseFloat(this.pitchRangeSelect.value),
-       pitchAutoReturn: this.autoReturnCheckbox.checked,
-       rotationLocked: this.rotationLocked,
-       sustain: this.sustainActive,
-       pitchReturnTime: parseInt(this.returnTimeSelect.value),
-     };
-   }
+  getValue() {
+      return {
+        dataset: this.datasetSelect.value,
+        key: this.keySelect.value,
+        scale: this.scaleSelect.value,
+        pitchBend: parseFloat(this.pitchWheel.slider.value),
+        pitchRange: parseFloat(this.pitchRangeSelect.value),
+        pitchAutoReturn: this.autoReturnCheckbox.checked,
+        rotationLocked: this.rotationLocked,
+        sustain: this.sustainActive,
+        pitchReturnTime: parseInt(this.returnTimeSelect.value),
+        noteDecayTime: parseFloat(this.decayTimeSelect.value),
+      };
+    }
 }

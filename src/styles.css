@@ -1,3 +1,13 @@
+html,
+body,
+#control-panel,
+#control-panel * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 body {
   margin: 0;
   overflow: hidden;
@@ -30,6 +40,13 @@ select {
   font-size: 0.95rem;
 }
 
+#control-panel label {
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 #control-panel {
   position: absolute;
   top: 16px;
@@ -41,29 +58,43 @@ select {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 220px;
+  min-width: 280px;
 }
 
-#control-panel label {
-  font-size: 0.85rem;
+#control-panel .control-button-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#control-panel .control-toggle-button {
+  flex: 1 1 120px;
+  padding: 10px 12px;
+  background: #222;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
 }
 
 #control-panel .pitch-wheel {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 180px;
 }
 
 #control-panel .pitch-wheel label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   width: 100%;
 }
 
 #control-panel .pitch-bend-slider {
-  width: 120px;
+  width: 220px;
   margin-top: 8px;
   transform: rotate(-90deg);
   transform-origin: center;

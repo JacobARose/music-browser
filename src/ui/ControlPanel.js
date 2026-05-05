@@ -22,6 +22,10 @@ export class ControlPanel {
       }))
     );
     this.pitchWheel = this.createPitchWheel();
+    this.rotationLocked = false;
+    this.sustainActive = false;
+    this.lockRotationButton = this.createToggleButton("Lock Rotation", "Unlock Rotation");
+    this.sustainButton = this.createToggleButton("Sustain On", "Sustain Off");
 
     this.datasetSelect.value = "random";
     this.keySelect.value = "C";
@@ -29,9 +33,15 @@ export class ControlPanel {
     this.pitchWheel.slider.value = "0";
     this.pitchWheel.valueDisplay.textContent = "0.00 st";
 
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "control-button-row";
+    buttonRow.appendChild(this.lockRotationButton);
+    buttonRow.appendChild(this.sustainButton);
+
     this.root.appendChild(this.datasetSelect.parentElement);
     this.root.appendChild(this.keySelect.parentElement);
     this.root.appendChild(this.scaleSelect.parentElement);
+    this.root.appendChild(buttonRow);
     this.root.appendChild(this.pitchWheel.container);
     document.body.appendChild(this.root);
 
@@ -39,6 +49,8 @@ export class ControlPanel {
     this.keySelect.addEventListener("change", this.emitChange);
     this.scaleSelect.addEventListener("change", this.emitChange);
     this.pitchWheel.slider.addEventListener("input", this.handlePitchBendInput);
+    this.lockRotationButton.addEventListener("click", this.handleRotationToggle);
+    this.sustainButton.addEventListener("click", this.handleSustainToggle);
 
     this.updateVisibility();
   }
@@ -89,6 +101,32 @@ export class ControlPanel {
     };
   }
 
+  createToggleButton(labelText, activeText) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "control-toggle-button";
+    button.textContent = labelText;
+    button.dataset.activeText = activeText;
+    button.dataset.inactiveText = labelText;
+    return button;
+  }
+
+  handleRotationToggle = () => {
+    this.rotationLocked = !this.rotationLocked;
+    this.lockRotationButton.textContent = this.rotationLocked
+      ? this.lockRotationButton.dataset.activeText
+      : this.lockRotationButton.dataset.inactiveText;
+    this.emitChange();
+  };
+
+  handleSustainToggle = () => {
+    this.sustainActive = !this.sustainActive;
+    this.sustainButton.textContent = this.sustainActive
+      ? this.sustainButton.dataset.activeText
+      : this.sustainButton.dataset.inactiveText;
+    this.emitChange();
+  };
+
   handlePitchBendInput = () => {
     const value = parseFloat(this.pitchWheel.slider.value);
     this.pitchWheel.valueDisplay.textContent = `${value.toFixed(2)} st`;
@@ -112,6 +150,8 @@ export class ControlPanel {
       key: this.keySelect.value,
       scale: this.scaleSelect.value,
       pitchBend: parseFloat(this.pitchWheel.slider.value),
+      rotationLocked: this.rotationLocked,
+      sustain: this.sustainActive,
     };
   }
 }

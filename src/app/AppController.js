@@ -18,11 +18,14 @@ export class AppController {
     };
 
     this.points = [];
+    this.sustainedVoiceIds = new Set();
     this.controlState = {
       dataset: "random",
       key: "C",
       scale: "major",
       pitchBend: 0,
+      rotationLocked: false,
+      sustain: false,
     };
 
     this.pointCloudView = new PointCloudView(this.sceneManager.scene);
@@ -44,10 +47,20 @@ export class AppController {
     this.hoverInteraction.setOnPointerPointChange(({ pointerId, point }) => {
       const voiceId = `pointer-${pointerId}`;
       if (point) {
+        if (this.controlState.sustain) {
+          const sustainVoiceId = `sustain-pointer-${pointerId}-${Date.now()}`;
+          this.sustainedVoiceIds.add(sustainVoiceId);
+          this.audioEngine.play(point.sound, sustainVoiceId);
+          return;
+        }
+
         this.audioEngine.play(point.sound, voiceId);
         return;
       }
-      this.audioEngine.stop(voiceId);
+
+      if (!this.controlState.sustain) {
+        this.audioEngine.stop(voiceId);
+      }
     });
 
     this.controlPanel = new ControlPanel(this.onControlPanelChange);
@@ -59,8 +72,23 @@ export class AppController {
       nextState.key !== this.controlState.key ||
       nextState.scale !== this.controlState.scale;
 
+    const rotationLockChanged =
+      nextState.rotationLocked !== this.controlState.rotationLocked;
+    const sustainReleased = this.controlState.sustain && !nextState.sustain;
+
     this.controlState = nextState;
     this.audioEngine.setPitchBend(this.controlState.pitchBend);
+
+    if (rotationLockChanged) {
+      this.sceneManager.setRotationEnabled(!this.controlState.rotationLocked);
+    }
+
+    if (sustainReleased) {
+      this.sustainedVoiceIds.forEach((voiceId) => {
+        this.audioEngine.stop(voiceId);
+      });
+      this.sustainedVoiceIds.clear();
+    }
 
     if (hasPointConfigChanged) {
       this.loadPoints();

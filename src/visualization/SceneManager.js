@@ -24,6 +24,10 @@ export class SceneManager {
     this.controls.enableDamping = true;
   }
 
+  setRotationEnabled(enabled) {
+    this.controls.enableRotate = enabled;
+  }
+
   attachResizeHandler() {
     this.handleResize = () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;

@@ -70,6 +70,7 @@ this.autoReturnCheckbox = document.createElement("input");
     this.pitchRangeSelect.value = "2";
     this.pitchWheel.slider.value = "0";
     this.pitchWheel.valueDisplay.textContent = "0.00 st";
+    this.decayTimeSelect.value = "0.5";
 
     const headerRow = document.createElement("div");
     headerRow.className = "control-header";
@@ -84,7 +85,7 @@ this.autoReturnCheckbox = document.createElement("input");
     buttonRow.appendChild(this.lockNavigationButton);
     buttonRow.appendChild(this.sustainButton);
 
-    this.collapsible = document.createElement("div");
+this.collapsible = document.createElement("div");
     this.collapsible.className = "control-collapsible";
     this.collapsible.hidden = !this.isMenuOpen;
 
@@ -94,13 +95,25 @@ this.autoReturnCheckbox = document.createElement("input");
       this.scaleSelect.parentElement,
     ]);
      const pitchSettingsSection = this.createSection("Pitch Bend Wheel", [
-       this.autoReturnLabel,
-       this.returnTimeSelect.parentElement,
-       this.pitchRangeSelect.parentElement,
-     ]);
+      this.autoReturnLabel,
+      this.returnTimeSelect.parentElement,
+      this.pitchRangeSelect.parentElement,
+    ]);
+
+    this.decayTimeSelect = this.createSelect("Note Decay (s)", [
+      { value: "0.5", label: "0.5 s" },
+      { value: "1.0", label: "1.0 s" },
+      { value: "1.5", label: "1.5 s" },
+      { value: "2.0", label: "2.0 s" },
+    ]);
+    this.decayTimeSelect.value = "0.5";
+    const decaySection = this.createSection("Note Decay (Sustain Off)", [
+      this.decayTimeSelect.parentElement,
+    ]);
 
     this.collapsible.appendChild(modeSection);
     this.collapsible.appendChild(pitchSettingsSection);
+    this.collapsible.appendChild(decaySection);
 
     this.root.appendChild(headerRow);
     this.root.appendChild(buttonRow);
@@ -115,6 +128,7 @@ this.autoReturnCheckbox = document.createElement("input");
     this.pitchRangeSelect.addEventListener("change", this.handlePitchRangeChange);
     this.autoReturnCheckbox.addEventListener("change", this.handleAutoReturnChange);
     this.returnTimeSelect.addEventListener("change", this.emitChange);
+    this.decayTimeSelect.addEventListener("change", this.emitChange);
     this.pitchWheel.slider.addEventListener("input", this.handlePitchBendInput);
     this.pitchWheel.slider.addEventListener("pointerup", this.handlePitchWheelRelease);
     this.pitchWheel.slider.addEventListener("pointercancel", this.handlePitchWheelRelease);
@@ -300,17 +314,18 @@ handlePitchWheelRelease = () => {
     this.scaleSelect.parentElement.style.display = isKeyScale ? "flex" : "none";
   }
 
-   getValue() {
-     return {
-       dataset: this.datasetSelect.value,
-       key: this.keySelect.value,
-       scale: this.scaleSelect.value,
-       pitchBend: parseFloat(this.pitchWheel.slider.value),
-       pitchRange: parseFloat(this.pitchRangeSelect.value),
-       pitchAutoReturn: this.autoReturnCheckbox.checked,
-       rotationLocked: this.rotationLocked,
-       sustain: this.sustainActive,
-       pitchReturnTime: parseInt(this.returnTimeSelect.value),
-     };
-   }
+    getValue() {
+      return {
+        dataset: this.datasetSelect.value,
+        key: this.keySelect.value,
+        scale: this.scaleSelect.value,
+        pitchBend: parseFloat(this.pitchWheel.slider.value),
+        pitchRange: parseFloat(this.pitchRangeSelect.value),
+        pitchAutoReturn: this.autoReturnCheckbox.checked,
+        rotationLocked: this.rotationLocked,
+        sustain: this.sustainActive,
+        pitchReturnTime: parseInt(this.returnTimeSelect.value),
+        noteDecayTime: parseFloat(this.decayTimeSelect.value),
+      };
+    }
 }

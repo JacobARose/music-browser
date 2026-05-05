@@ -92,20 +92,21 @@ export class ToneAudioEngine extends AudioEngine {
     }
   }
 
-  stop(voiceId) {
+stop(voiceId, decayTime) {
     const voice = this.activeVoices.get(voiceId);
     if (!voice) {
       return;
     }
 
     const now = this.audioContext.currentTime;
+    const duration = decayTime !== undefined ? decayTime : 0.5;
     voice.gainNode.gain.cancelScheduledValues(now);
     voice.gainNode.gain.setValueAtTime(
       voice.gainNode.gain.value,
       now
     );
-    voice.gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-    voice.oscillator.stop(now + 0.52);
+    voice.gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    voice.oscillator.stop(now + duration + 0.02);
     voice.oscillator.addEventListener(
       "ended",
       () => {

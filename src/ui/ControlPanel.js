@@ -57,7 +57,7 @@ this.root.id = "control-panel";
     this.menuToggleButton = document.createElement("button");
     this.menuToggleButton.type = "button";
     this.menuToggleButton.className = "control-menu-toggle";
-    this.menuToggleButton.textContent = "Show Settings";
+    this.menuToggleButton.textContent = "Hide Settings";
 
     this.lockNavigationButton = this.createToggleButton(
       "Lock Navigation",
@@ -71,7 +71,6 @@ this.root.id = "control-panel";
     this.pitchRangeSelect.value = "2";
     this.pitchWheel.slider.value = "0";
     this.pitchWheel.valueDisplay.textContent = "0.00 st";
-    this.decayTimeSelect.value = "0.5";
 
     const headerRow = document.createElement("div");
     headerRow.className = "control-header";
@@ -115,13 +114,12 @@ this.collapsible = document.createElement("div");
     this.collapsible.appendChild(modeSection);
     this.collapsible.appendChild(pitchSettingsSection);
     this.collapsible.appendChild(decaySection);
-    this.collapsible.appendChild(decaySection);
 
     this.root.appendChild(headerRow);
     this.root.appendChild(buttonRow);
     this.root.appendChild(this.collapsible);
-    this.root.appendChild(this.pitchWheel.container);
     document.body.appendChild(this.root);
+    document.body.appendChild(this.pitchWheel.container);
 
     this.menuToggleButton.addEventListener("click", this.handleMenuToggle);
     this.datasetSelect.addEventListener("change", this.emitChange);
@@ -130,7 +128,6 @@ this.collapsible = document.createElement("div");
     this.pitchRangeSelect.addEventListener("change", this.handlePitchRangeChange);
     this.autoReturnCheckbox.addEventListener("change", this.handleAutoReturnChange);
     this.returnTimeSelect.addEventListener("change", this.emitChange);
-    this.decayTimeSelect.addEventListener("change", this.emitChange);
     this.decayTimeSelect.addEventListener("change", this.emitChange);
     this.pitchWheel.slider.addEventListener("input", this.handlePitchBendInput);
     this.pitchWheel.slider.addEventListener("pointerup", this.handlePitchWheelRelease);

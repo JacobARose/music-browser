@@ -31,14 +31,27 @@ export class ControlPanel {
       { value: "12", label: "+/- 12 st" },
       { value: "24", label: "+/- 24 st" },
     ]);
-    this.autoReturnSelect = this.createSelect("Auto Return", [
-      { value: "return", label: "Return to 0" },
-      { value: "hold", label: "Stay where left" },
+    this.autoReturnCheckbox = document.createElement("input");
+    this.autoReturnCheckbox.type = "checkbox";
+    this.autoReturnCheckbox.checked = true;
+    this.autoReturnLabel = document.createElement("label");
+    this.autoReturnLabel.textContent = "Auto Return";
+    this.autoReturnLabel.prepend(this.autoReturnCheckbox);
+    
+    this.returnTimeSelect = this.createSelect("Return Time (ms)", [
+      { value: "100", label: "100 ms" },
+      { value: "200", label: "200 ms" },
+      { value: "300", label: "300 ms" },
+      { value: "500", label: "500 ms" },
+      { value: "1000", label: "1000 ms" },
     ]);
+    this.returnTimeSelect.value = "200"; // sensible default
+    this.returnTimeSelect.parentElement.style.display = this.autoReturnCheckbox.checked ? "flex" : "none";
 
-    this.pitchWheel = this.createPitchWheel();
-    this.rotationLocked = false;
-    this.sustainActive = false;
+     this.pitchWheel = this.createPitchWheel();
+     this.rotationLocked = false;
+     this.sustainActive = false;
+     this.returnAnimationId = null;
 
     this.menuToggleButton = document.createElement("button");
     this.menuToggleButton.type = "button";
@@ -51,13 +64,15 @@ export class ControlPanel {
     );
     this.sustainButton = this.createToggleButton("Sustain On", "Sustain Off");
 
-    this.datasetSelect.value = "random";
-    this.keySelect.value = "C";
-    this.scaleSelect.value = "major";
+    this.datasetSelect.value = "keyScale";
+    this.keySelect.value = "D";
+    this.scaleSelect.value = "mixolydian";
     this.pitchRangeSelect.value = "2";
-    this.autoReturnSelect.value = "return";
+    this.autoReturnCheckbox.checked = true;
     this.pitchWheel.slider.value = "0";
     this.pitchWheel.valueDisplay.textContent = "0.00 st";
+    this.returnTimeSelect.value = "200"; // sensible default
+    this.returnTimeSelect.parentElement.style.display = this.autoReturnCheckbox.checked ? "flex" : "none";
 
     const headerRow = document.createElement("div");
     headerRow.className = "control-header";
@@ -81,10 +96,11 @@ export class ControlPanel {
       this.keySelect.parentElement,
       this.scaleSelect.parentElement,
     ]);
-    const pitchSettingsSection = this.createSection("Pitch Bend", [
-      this.autoReturnSelect.parentElement,
-      this.pitchRangeSelect.parentElement,
-    ]);
+     const pitchSettingsSection = this.createSection("Pitch Bend Wheel", [
+       this.autoReturnLabel,
+       this.returnTimeSelect.parentElement,
+       this.pitchRangeSelect.parentElement,
+     ]);
 
     this.collapsible.appendChild(modeSection);
     this.collapsible.appendChild(pitchSettingsSection);
@@ -100,7 +116,8 @@ export class ControlPanel {
     this.keySelect.addEventListener("change", this.emitChange);
     this.scaleSelect.addEventListener("change", this.emitChange);
     this.pitchRangeSelect.addEventListener("change", this.handlePitchRangeChange);
-    this.autoReturnSelect.addEventListener("change", this.emitChange);
+    this.autoReturnCheckbox.addEventListener("change", this.handleAutoReturnChange);
+    this.returnTimeSelect.addEventListener("change", this.emitChange);
     this.pitchWheel.slider.addEventListener("input", this.handlePitchBendInput);
     this.pitchWheel.slider.addEventListener("pointerup", this.handlePitchWheelRelease);
     this.pitchWheel.slider.addEventListener("pointercancel", this.handlePitchWheelRelease);
@@ -205,36 +222,70 @@ export class ControlPanel {
     this.emitChange();
   };
 
-  handlePitchRangeChange = () => {
-    const range = parseFloat(this.pitchRangeSelect.value);
-    const slider = this.pitchWheel.slider;
-    slider.min = String(-range);
-    slider.max = String(range);
+   handlePitchRangeChange = () => {
+     const range = parseFloat(this.pitchRangeSelect.value);
+     const slider = this.pitchWheel.slider;
+     slider.min = String(-range);
+     slider.max = String(range);
 
-    const currentValue = parseFloat(slider.value);
-    if (currentValue > range) {
-      slider.value = String(range);
-    }
-    if (currentValue < -range) {
-      slider.value = String(-range);
-    }
+     const currentValue = parseFloat(slider.value);
+     if (currentValue > range) {
+       slider.value = String(range);
+     }
+     if (currentValue < -range) {
+       slider.value = String(-range);
+     }
 
-    this.updatePitchValueDisplay();
-    this.emitChange();
-  };
+     this.updatePitchValueDisplay();
+     this.emitChange();
+   };
 
-  handlePitchBendInput = () => {
-    this.updatePitchValueDisplay();
-    this.emitChange();
-  };
+   handleAutoReturnChange = () => {
+     this.returnTimeSelect.parentElement.style.display = this.autoReturnCheckbox.checked
+       ? "flex"
+       : "none";
+     this.cancelReturnAnimation();
+     this.emitChange();
+   };
 
-  handlePitchWheelRelease = () => {
-    if (this.autoReturnSelect.value === "return") {
-      this.pitchWheel.slider.value = "0";
-      this.updatePitchValueDisplay();
-      this.emitChange();
-    }
-  };
+   handlePitchBendInput = () => {
+     this.cancelReturnAnimation();
+     this.updatePitchValueDisplay();
+     this.emitChange();
+   };
+
+   cancelReturnAnimation = () => {
+     if (this.returnAnimationId !== null) {
+       cancelAnimationFrame(this.returnAnimationId);
+       this.returnAnimationId = null;
+     }
+   };
+
+   handlePitchWheelRelease = () => {
+     if (this.autoReturnCheckbox.checked) {
+       this.cancelReturnAnimation();
+       const startValue = parseFloat(this.pitchWheel.slider.value);
+       const duration = parseInt(this.returnTimeSelect.value);
+       const startTime = performance.now();
+
+       const animate = (currentTime) => {
+         const elapsed = currentTime - startTime;
+         const progress = Math.min(elapsed / duration, 1);
+         const newValue = startValue * (1 - progress);
+         this.pitchWheel.slider.value = newValue;
+         this.updatePitchValueDisplay();
+         this.emitChange();
+
+         if (progress < 1) {
+           this.returnAnimationId = requestAnimationFrame(animate);
+         } else {
+           this.returnAnimationId = null;
+         }
+       };
+
+       this.returnAnimationId = requestAnimationFrame(animate);
+     }
+   };
 
   updatePitchValueDisplay() {
     const value = parseFloat(this.pitchWheel.slider.value);
@@ -252,16 +303,17 @@ export class ControlPanel {
     this.scaleSelect.parentElement.style.display = isKeyScale ? "flex" : "none";
   }
 
-  getValue() {
-    return {
-      dataset: this.datasetSelect.value,
-      key: this.keySelect.value,
-      scale: this.scaleSelect.value,
-      pitchBend: parseFloat(this.pitchWheel.slider.value),
-      pitchRange: parseFloat(this.pitchRangeSelect.value),
-      pitchAutoReturn: this.autoReturnSelect.value === "return",
-      rotationLocked: this.rotationLocked,
-      sustain: this.sustainActive,
-    };
-  }
+   getValue() {
+     return {
+       dataset: this.datasetSelect.value,
+       key: this.keySelect.value,
+       scale: this.scaleSelect.value,
+       pitchBend: parseFloat(this.pitchWheel.slider.value),
+       pitchRange: parseFloat(this.pitchRangeSelect.value),
+       pitchAutoReturn: this.autoReturnCheckbox.checked,
+       rotationLocked: this.rotationLocked,
+       sustain: this.sustainActive,
+       pitchReturnTime: parseInt(this.returnTimeSelect.value),
+     };
+   }
 }

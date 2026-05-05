@@ -24,10 +24,11 @@ export class SceneManager {
     this.controls.enableDamping = true;
   }
 
-  setRotationEnabled(enabled) {
-    this.controls.enableRotate = enabled;
-    this.controls.enableZoom = enabled;
-  }
+    setRotationEnabled(enabled) {
+        this.controls.enableRotate = enabled;
+        this.controls.enableZoom = enabled;
+        this.controls.enablePan = enabled;
+    }
 
   attachResizeHandler() {
     this.handleResize = () => {

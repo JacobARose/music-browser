@@ -31,10 +31,22 @@ export class ControlPanel {
       { value: "12", label: "+/- 12 st" },
       { value: "24", label: "+/- 24 st" },
     ]);
-    this.autoReturnSelect = this.createSelect("Auto Return", [
-      { value: "return", label: "Return to 0" },
-      { value: "hold", label: "Stay where left" },
+    this.autoReturnCheckbox = document.createElement("input");
+    this.autoReturnCheckbox.type = "checkbox";
+    this.autoReturnCheckbox.checked = true;
+    this.autoReturnLabel = document.createElement("label");
+    this.autoReturnLabel.textContent = "Auto Return";
+    this.autoReturnLabel.prepend(this.autoReturnCheckbox);
+    
+    this.returnTimeSelect = this.createSelect("Return Time (ms)", [
+      { value: "100", label: "100 ms" },
+      { value: "200", label: "200 ms" },
+      { value: "300", label: "300 ms" },
+      { value: "500", label: "500 ms" },
+      { value: "1000", label: "1000 ms" },
     ]);
+    this.returnTimeSelect.value = "200"; // sensible default
+    this.returnTimeSelect.parentElement.style.display = this.autoReturnCheckbox.checked ? "flex" : "none";
 
     this.pitchWheel = this.createPitchWheel();
     this.rotationLocked = false;
@@ -51,13 +63,15 @@ export class ControlPanel {
     );
     this.sustainButton = this.createToggleButton("Sustain On", "Sustain Off");
 
-    this.datasetSelect.value = "random";
-    this.keySelect.value = "C";
-    this.scaleSelect.value = "major";
+    this.datasetSelect.value = "keyScale";
+    this.keySelect.value = "D";
+    this.scaleSelect.value = "mixolydian";
     this.pitchRangeSelect.value = "2";
-    this.autoReturnSelect.value = "return";
+    this.autoReturnCheckbox.checked = true;
     this.pitchWheel.slider.value = "0";
     this.pitchWheel.valueDisplay.textContent = "0.00 st";
+    this.returnTimeSelect.value = "200"; // sensible default
+    this.returnTimeSelect.parentElement.style.display = this.autoReturnCheckbox.checked ? "flex" : "none";
 
     const headerRow = document.createElement("div");
     headerRow.className = "control-header";
@@ -82,7 +96,8 @@ export class ControlPanel {
       this.scaleSelect.parentElement,
     ]);
     const pitchSettingsSection = this.createSection("Pitch Bend", [
-      this.autoReturnSelect.parentElement,
+      this.autoReturnLabel,
+      this.returnTimeSelect.parentElement,
       this.pitchRangeSelect.parentElement,
     ]);
 
@@ -100,7 +115,8 @@ export class ControlPanel {
     this.keySelect.addEventListener("change", this.emitChange);
     this.scaleSelect.addEventListener("change", this.emitChange);
     this.pitchRangeSelect.addEventListener("change", this.handlePitchRangeChange);
-    this.autoReturnSelect.addEventListener("change", this.emitChange);
+    this.autoReturnCheckbox.addEventListener("change", this.handleAutoReturnChange);
+    this.returnTimeSelect.addEventListener("change", this.emitChange);
     this.pitchWheel.slider.addEventListener("input", this.handlePitchBendInput);
     this.pitchWheel.slider.addEventListener("pointerup", this.handlePitchWheelRelease);
     this.pitchWheel.slider.addEventListener("pointercancel", this.handlePitchWheelRelease);
@@ -228,13 +244,22 @@ export class ControlPanel {
     this.emitChange();
   };
 
-  handlePitchWheelRelease = () => {
-    if (this.autoReturnSelect.value === "return") {
-      this.pitchWheel.slider.value = "0";
-      this.updatePitchValueDisplay();
-      this.emitChange();
-    }
-  };
+    handlePitchWheelRelease = () => {
+        if (this.autoReturnCheckbox.checked) {
+            // Set slider to 0 with transition based on return time
+            const returnTimeMs = parseInt(this.returnTimeSelect.value);
+            this.pitchWheel.slider.style.transition = `value ${returnTimeMs}ms linear`;
+            this.pitchWheel.slider.value = "0";
+            
+            // Remove transition after it completes
+            setTimeout(() => {
+                this.pitchWheel.slider.style.transition = '';
+            }, returnTimeMs);
+            
+            this.updatePitchValueDisplay();
+            this.emitChange();
+        }
+    };
 
   updatePitchValueDisplay() {
     const value = parseFloat(this.pitchWheel.slider.value);

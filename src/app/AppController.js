@@ -24,6 +24,8 @@ export class AppController {
       key: "C",
       scale: "major",
       pitchBend: 0,
+      pitchRange: 2,
+      pitchAutoReturn: true,
       rotationLocked: false,
       sustain: false,
     };

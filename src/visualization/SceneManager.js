@@ -26,6 +26,7 @@ export class SceneManager {
 
   setRotationEnabled(enabled) {
     this.controls.enableRotate = enabled;
+    this.controls.enableZoom = enabled;
   }
 
   attachResizeHandler() {

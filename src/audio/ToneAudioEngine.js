@@ -104,8 +104,8 @@ export class ToneAudioEngine extends AudioEngine {
       voice.gainNode.gain.value,
       now
     );
-    voice.gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-    voice.oscillator.stop(now + 0.1);
+    voice.gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    voice.oscillator.stop(now + 0.52);
     voice.oscillator.addEventListener(
       "ended",
       () => {

@@ -19,6 +19,12 @@ export class AppController {
 
     this.points = [];
     this.sustainedVoiceIds = new Set();
+    this.sustainedPoints = new Map();
+    this.currentHoverPoint = null;
+    this.hoveredPointId = null;
+    this.lastActivePoint = null;
+    this.pointerActivePointById = new Map();
+    this.hoverVoiceId = null;
     this.controlState = {
       dataset: "random",
       key: "C",
@@ -41,28 +47,60 @@ export class AppController {
     this.hoverInteraction.attachMouseListener();
     this.hoverInteraction.attachPointerListeners(this.sceneManager.renderer.domElement);
     this.hoverInteraction.setOnPointChange((point) => {
-      this.pointCloudView.highlightPoint(point);
-      if (point) {
-        this.audioEngine.play(point.sound);
+      this.currentHoverPoint = point;
+      if (!this.controlState.sustain) {
+        this.handleHoverPoint(point);
       }
     });
 
     this.hoverInteraction.setOnPointerPointChange(({ pointerId, point }) => {
       const voiceId = `pointer-${pointerId}`;
-      if (point) {
-        if (this.controlState.sustain) {
-          const sustainVoiceId = `sustain-pointer-${pointerId}-${Date.now()}`;
-          this.sustainedVoiceIds.add(sustainVoiceId);
-          this.audioEngine.play(point.sound, sustainVoiceId);
-          return;
+      const previousPointId = this.pointerActivePointById.get(pointerId) ?? null;
+      const nextPointId = point ? point.id : null;
+
+      if (this.controlState.sustain) {
+        if (!previousPointId && nextPointId) {
+          if (this.sustainedPoints.has(point.id)) {
+            const existingVoiceId = this.sustainedPoints.get(point.id);
+            this.audioEngine.stop(existingVoiceId, this.controlState.noteDecayTime);
+            this.sustainedVoiceIds.delete(existingVoiceId);
+            this.sustainedPoints.delete(point.id);
+            this.pointCloudView.removeActiveHighlight(point.id);
+            if (this.lastActivePoint?.id === point.id) {
+              this.lastActivePoint = null;
+            }
+          } else {
+            const sustainVoiceId = `sustain-${point.id}-${Date.now()}`;
+            if (this.hoveredPointId === point.id && this.hoverVoiceId) {
+              this.audioEngine.stop(this.hoverVoiceId, this.controlState.noteDecayTime);
+              this.hoverVoiceId = null;
+            }
+            this.sustainedVoiceIds.add(sustainVoiceId);
+            this.sustainedPoints.set(point.id, sustainVoiceId);
+            this.lastActivePoint = point;
+            this.pointCloudView.addActiveHighlight(point);
+            this.audioEngine.play(point.sound, sustainVoiceId);
+          }
         }
 
-        this.audioEngine.play(point.sound, voiceId);
+        if (nextPointId) {
+          this.pointerActivePointById.set(pointerId, nextPointId);
+        } else {
+          this.pointerActivePointById.delete(pointerId);
+        }
         return;
       }
 
-      if (!this.controlState.sustain) {
+      if (point) {
+        this.audioEngine.play(point.sound, voiceId);
+      } else {
         this.audioEngine.stop(voiceId, this.controlState.noteDecayTime);
+      }
+
+      if (nextPointId) {
+        this.pointerActivePointById.set(pointerId, nextPointId);
+      } else {
+        this.pointerActivePointById.delete(pointerId);
       }
     });
 
@@ -91,12 +129,39 @@ export class AppController {
         this.audioEngine.stop(voiceId, this.controlState.noteDecayTime);
       });
       this.sustainedVoiceIds.clear();
+      this.sustainedPoints.clear();
+      this.pointCloudView.clearActiveHighlights();
     }
 
     if (hasPointConfigChanged) {
       this.loadPoints();
     }
   };
+
+  handleHoverPoint(point) {
+    const nextPointId = point?.id ?? null;
+    if (nextPointId === this.hoveredPointId) {
+      return;
+    }
+
+    if (this.hoverVoiceId) {
+      this.audioEngine.stop(this.hoverVoiceId, this.controlState.noteDecayTime);
+      this.hoverVoiceId = null;
+    }
+
+    if (this.hoveredPointId && !this.sustainedPoints.has(this.hoveredPointId)) {
+      this.pointCloudView.removeActiveHighlight(this.hoveredPointId);
+    }
+
+    this.hoveredPointId = nextPointId;
+    if (!point) {
+      return;
+    }
+
+    this.hoverVoiceId = `hover-${point.id}`;
+    this.pointCloudView.addActiveHighlight(point);
+    this.audioEngine.play(point.sound, this.hoverVoiceId);
+  }
 
   async start() {
     await this.audioEngine.init();

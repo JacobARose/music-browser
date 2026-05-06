@@ -129,6 +129,7 @@ this.collapsible = document.createElement("div");
     this.autoReturnCheckbox.addEventListener("change", this.handleAutoReturnChange);
     this.returnTimeSelect.addEventListener("change", this.emitChange);
     this.decayTimeSelect.addEventListener("change", this.emitChange);
+    this.pitchWheel.slider.addEventListener("pointerdown", this.handlePitchWheelDown);
     this.pitchWheel.slider.addEventListener("input", this.handlePitchBendInput);
     this.pitchWheel.slider.addEventListener("pointerup", this.handlePitchWheelRelease);
     this.pitchWheel.slider.addEventListener("pointercancel", this.handlePitchWheelRelease);
@@ -240,23 +241,15 @@ handleSustainToggle = () => {
      slider.max = String(range);
 
      const currentValue = parseFloat(slider.value);
-     if (currentValue > range) {
-       slider.value = String(range);
-     }
-     if (currentValue < -range) {
-       slider.value = String(-range);
-     }
+     const clampedValue = Math.max(Math.min(currentValue, range), -range);
+     slider.value = String(clampedValue);
 
      this.updatePitchValueDisplay();
      this.emitChange();
    };
 
-   handleAutoReturnChange = () => {
-     this.returnTimeSelect.parentElement.style.display = this.autoReturnCheckbox.checked
-       ? "flex"
-       : "none";
+   handlePitchWheelDown = () => {
      this.cancelReturnAnimation();
-     this.emitChange();
    };
 
    handlePitchBendInput = () => {
@@ -283,7 +276,7 @@ handlePitchWheelRelease = () => {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
         const newValue = startValue * (1 - progress);
-        this.pitchWheel.slider.value = newValue;
+        this.pitchWheel.slider.value = String(newValue);
         this.updatePitchValueDisplay();
         this.emitChange();
 

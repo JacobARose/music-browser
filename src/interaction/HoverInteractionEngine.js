@@ -1,4 +1,5 @@
 import { Raycaster, Vector2 } from "three";
+import { POINT_ACTIVATION_RADIUS } from "../visualization/PointCloudView.js";
 
 export class HoverInteractionEngine {
   constructor({ camera, interactiveObject, points }) {
@@ -10,7 +11,7 @@ export class HoverInteractionEngine {
     this.hoveredIndex = null;
     this.activePointers = new Map();
     this.pointerIndexMap = new Map();
-    this.raycaster.params.Points.threshold = 1.0;
+    this.raycaster.params.Points.threshold = POINT_ACTIVATION_RADIUS;
     this.onPointChange = null;
     this.onPointerPointChange = null;
   }
@@ -123,7 +124,7 @@ export class HoverInteractionEngine {
   }
 
   tick() {
-    if (!this.interactiveObject) {
+    if (!this.interactiveObject || this.activePointers.size > 0) {
       return;
     }
 

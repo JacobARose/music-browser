@@ -9,16 +9,20 @@ import {
   SphereGeometry,
 } from "three";
 
+export const POINT_ACTIVATION_RADIUS = 1.5;
+
 export class PointCloudView {
   constructor(scene) {
     this.scene = scene;
     this.pointCloud = null;
-    this.highlightMesh = new Mesh(
-      new SphereGeometry(1.5, 16, 16),
+    this.highlightGeometry = new SphereGeometry(POINT_ACTIVATION_RADIUS, 16, 16);
+    this.hoverHighlightMesh = new Mesh(
+      this.highlightGeometry,
       new MeshBasicMaterial({ color: 0xffffff, wireframe: true })
     );
-    this.highlightMesh.visible = false;
-    this.scene.add(this.highlightMesh);
+    this.hoverHighlightMesh.visible = false;
+    this.scene.add(this.hoverHighlightMesh);
+    this.activeHighlightMeshes = new Map();
   }
 
   setPoints(points) {
@@ -60,13 +64,52 @@ export class PointCloudView {
     return this.pointCloud;
   }
 
-  highlightPoint(point) {
-    if (!point) {
-      this.highlightMesh.visible = false;
+  addActiveHighlight(point) {
+    if (!point || this.activeHighlightMeshes.has(point.id)) {
       return;
     }
 
-    this.highlightMesh.position.set(point.position.x, point.position.y, point.position.z);
-    this.highlightMesh.visible = true;
+    const highlightMaterial = new MeshBasicMaterial({
+      color: 0xffffff,
+      wireframe: true,
+    });
+    const highlightMesh = new Mesh(this.highlightGeometry, highlightMaterial);
+    highlightMesh.position.set(point.position.x, point.position.y, point.position.z);
+    this.scene.add(highlightMesh);
+    this.activeHighlightMeshes.set(point.id, highlightMesh);
+  }
+
+  removeActiveHighlight(point) {
+    const pointId = point?.id ?? point;
+    if (!pointId) {
+      return;
+    }
+
+    const highlightMesh = this.activeHighlightMeshes.get(pointId);
+    if (!highlightMesh) {
+      return;
+    }
+
+    this.scene.remove(highlightMesh);
+    highlightMesh.material.dispose();
+    this.activeHighlightMeshes.delete(pointId);
+  }
+
+  clearActiveHighlights() {
+    this.activeHighlightMeshes.forEach((mesh) => {
+      this.scene.remove(mesh);
+      mesh.material.dispose();
+    });
+    this.activeHighlightMeshes.clear();
+  }
+
+  highlightPoint(point) {
+    if (!point) {
+      this.hoverHighlightMesh.visible = false;
+      return;
+    }
+
+    this.hoverHighlightMesh.position.set(point.position.x, point.position.y, point.position.z);
+    this.hoverHighlightMesh.visible = true;
   }
 }

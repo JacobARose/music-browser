@@ -105,7 +105,7 @@ stop(voiceId, decayTime) {
       voice.gainNode.gain.value,
       now
     );
-    voice.gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    voice.gainNode.gain.linearRampToValueAtTime(0.001, now + duration);
     voice.oscillator.stop(now + duration + 0.02);
     voice.oscillator.addEventListener(
       "ended",

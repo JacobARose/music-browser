@@ -29,6 +29,8 @@ export class AppController {
       dataset: "random",
       key: "C",
       scale: "major",
+      octaveMin: 2,
+      octaveMax: 5,
       pitchBend: 0,
       pitchRange: 2,
       pitchAutoReturn: true,
@@ -104,6 +106,7 @@ export class AppController {
       }
     });
 
+    this.hoverInteraction.setOnPointerDoubleTap(this.handlePointerDoubleTap);
     this.controlPanel = new ControlPanel(this.onControlPanelChange);
   }
 
@@ -111,7 +114,9 @@ export class AppController {
     const hasPointConfigChanged =
       nextState.dataset !== this.controlState.dataset ||
       nextState.key !== this.controlState.key ||
-      nextState.scale !== this.controlState.scale;
+      nextState.scale !== this.controlState.scale ||
+      nextState.octaveMin !== this.controlState.octaveMin ||
+      nextState.octaveMax !== this.controlState.octaveMax;
 
     const rotationLockChanged =
       nextState.rotationLocked !== this.controlState.rotationLocked;
@@ -161,6 +166,40 @@ export class AppController {
     this.hoverVoiceId = `hover-${point.id}`;
     this.pointCloudView.addActiveHighlight(point);
     this.audioEngine.play(point.sound, this.hoverVoiceId);
+  }
+
+  handlePointerDoubleTap = ({ point }) => {
+    if (!point || this.controlState.sustain) {
+      return;
+    }
+
+    this.toggleSustainPoint(point);
+  };
+
+  toggleSustainPoint(point) {
+    if (this.sustainedPoints.has(point.id)) {
+      const voiceId = this.sustainedPoints.get(point.id);
+      this.audioEngine.stop(voiceId, this.controlState.noteDecayTime);
+      this.sustainedVoiceIds.delete(voiceId);
+      this.sustainedPoints.delete(point.id);
+      this.pointCloudView.removeActiveHighlight(point.id);
+      if (this.lastActivePoint?.id === point.id) {
+        this.lastActivePoint = null;
+      }
+      return;
+    }
+
+    if (this.hoveredPointId === point.id && this.hoverVoiceId) {
+      this.audioEngine.stop(this.hoverVoiceId, this.controlState.noteDecayTime);
+      this.hoverVoiceId = null;
+    }
+
+    const sustainVoiceId = `sustain-${point.id}-${Date.now()}`;
+    this.sustainedVoiceIds.add(sustainVoiceId);
+    this.sustainedPoints.set(point.id, sustainVoiceId);
+    this.lastActivePoint = point;
+    this.pointCloudView.addActiveHighlight(point);
+    this.audioEngine.play(point.sound, sustainVoiceId);
   }
 
   async start() {

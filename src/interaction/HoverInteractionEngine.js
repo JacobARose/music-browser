@@ -11,9 +11,12 @@ export class HoverInteractionEngine {
     this.hoveredIndex = null;
     this.activePointers = new Map();
     this.pointerIndexMap = new Map();
+    this.pointerMoved = new Map();
+    this.lastTouchTap = { pointId: null, time: 0 };
     this.raycaster.params.Points.threshold = POINT_ACTIVATION_RADIUS;
     this.onPointChange = null;
     this.onPointerPointChange = null;
+    this.onPointerDoubleTap = null;
   }
 
   attachMouseListener() {
@@ -33,6 +36,7 @@ export class HoverInteractionEngine {
     target.addEventListener("pointermove", this.handlePointerMove);
     target.addEventListener("pointerup", this.handlePointerUp);
     target.addEventListener("pointercancel", this.handlePointerUp);
+    target.addEventListener("dblclick", this.handleDoubleClick);
   }
 
   handlePointerDown = (event) => {
@@ -43,6 +47,7 @@ export class HoverInteractionEngine {
     const coords = this._normalizePointer(event);
     this.activePointers.set(event.pointerId, coords);
     this.pointerIndexMap.set(event.pointerId, null);
+    this.pointerMoved.set(event.pointerId, false);
 
     try {
       event.target.setPointerCapture(event.pointerId);
@@ -60,6 +65,7 @@ export class HoverInteractionEngine {
 
     const coords = this._normalizePointer(event);
     this.activePointers.set(event.pointerId, coords);
+    this.pointerMoved.set(event.pointerId, true);
     this._updatePointer(event.pointerId, coords);
   };
 
@@ -68,9 +74,50 @@ export class HoverInteractionEngine {
       return;
     }
 
+    const wasMoved = this.pointerMoved.get(event.pointerId);
+    const currentIndex = this.pointerIndexMap.get(event.pointerId);
+    const point = currentIndex !== null ? this.points[currentIndex] ?? null : null;
+
+    if (event.pointerType === "touch" && !wasMoved && point) {
+      const now = performance.now();
+      if (
+        this.lastTouchTap.pointId === point.id &&
+        now - this.lastTouchTap.time < 300
+      ) {
+        this.lastTouchTap.pointId = null;
+        this.lastTouchTap.time = 0;
+        if (typeof this.onPointerDoubleTap === "function") {
+          this.onPointerDoubleTap({ pointerId: event.pointerId, point });
+        }
+      } else {
+        this.lastTouchTap.pointId = point.id;
+        this.lastTouchTap.time = now;
+      }
+    }
+
     this.activePointers.delete(event.pointerId);
     this.pointerIndexMap.delete(event.pointerId);
+    this.pointerMoved.delete(event.pointerId);
     this._emitPointerChange(event.pointerId, null);
+  };
+
+  handleDoubleClick = (event) => {
+    const isMouse = event.pointerType ? event.pointerType === "mouse" : true;
+    if (!isMouse) {
+      return;
+    }
+
+    const normalizedCoords = this._normalizePointer(event);
+    if (!this.interactiveObject) {
+      return;
+    }
+
+    this.raycaster.setFromCamera(normalizedCoords, this.camera);
+    const intersects = this.raycaster.intersectObject(this.interactiveObject);
+    const point = intersects.length > 0 ? this.points[intersects[0].index] ?? null : null;
+    if (point && typeof this.onPointerDoubleTap === "function") {
+      this.onPointerDoubleTap({ pointerId: event.pointerId ?? null, point });
+    }
   };
 
   _normalizePointer(event) {
@@ -121,6 +168,10 @@ export class HoverInteractionEngine {
 
   setOnPointerPointChange(callback) {
     this.onPointerPointChange = callback;
+  }
+
+  setOnPointerDoubleTap(callback) {
+    this.onPointerDoubleTap = callback;
   }
 
   tick() {

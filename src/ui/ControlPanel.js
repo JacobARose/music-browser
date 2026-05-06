@@ -32,6 +32,30 @@ this.root.id = "control-panel";
       { value: "24", label: "+/- 24 st" },
     ]);
 
+    this.octaveMinSelect = this.createSelect("Min", [
+      { value: "0", label: "0" },
+      { value: "1", label: "1" },
+      { value: "2", label: "2" },
+      { value: "3", label: "3" },
+      { value: "4", label: "4" },
+      { value: "5", label: "5" },
+      { value: "6", label: "6" },
+      { value: "7", label: "7" },
+      { value: "8", label: "8" },
+    ]);
+
+    this.octaveMaxSelect = this.createSelect("Max", [
+      { value: "0", label: "0" },
+      { value: "1", label: "1" },
+      { value: "2", label: "2" },
+      { value: "3", label: "3" },
+      { value: "4", label: "4" },
+      { value: "5", label: "5" },
+      { value: "6", label: "6" },
+      { value: "7", label: "7" },
+      { value: "8", label: "8" },
+    ]);
+
     this.autoReturnCheckbox = document.createElement("input");
     this.autoReturnCheckbox.type = "checkbox";
     this.autoReturnCheckbox.checked = true;
@@ -69,6 +93,8 @@ this.root.id = "control-panel";
     this.keySelect.value = "D";
     this.scaleSelect.value = "mixolydian";
     this.pitchRangeSelect.value = "2";
+    this.octaveMinSelect.value = "2";
+    this.octaveMaxSelect.value = "5";
     this.pitchWheel.slider.value = "0";
     this.pitchWheel.valueDisplay.textContent = "0.00 st";
 
@@ -85,15 +111,22 @@ this.root.id = "control-panel";
     buttonRow.appendChild(this.lockNavigationButton);
     buttonRow.appendChild(this.sustainButton);
 
-this.collapsible = document.createElement("div");
+    this.collapsible = document.createElement("div");
     this.collapsible.className = "control-collapsible";
     this.collapsible.hidden = !this.isMenuOpen;
+
+    const octaveSection = this.createSection("Octave", [
+      this.octaveMinSelect.parentElement,
+      this.octaveMaxSelect.parentElement,
+    ]);
 
     const modeSection = this.createSection("Mode", [
       this.datasetSelect.parentElement,
       this.keySelect.parentElement,
       this.scaleSelect.parentElement,
+      octaveSection,
     ]);
+
     const pitchSettingsSection = this.createSection("Pitch Bend Wheel", [
       this.autoReturnLabel,
       this.returnTimeSelect.parentElement,
@@ -125,6 +158,8 @@ this.collapsible = document.createElement("div");
     this.datasetSelect.addEventListener("change", this.emitChange);
     this.keySelect.addEventListener("change", this.emitChange);
     this.scaleSelect.addEventListener("change", this.emitChange);
+    this.octaveMinSelect.addEventListener("change", this.handleOctaveBoundsChange);
+    this.octaveMaxSelect.addEventListener("change", this.handleOctaveBoundsChange);
     this.pitchRangeSelect.addEventListener("change", this.handlePitchRangeChange);
     this.autoReturnCheckbox.addEventListener("change", this.handleAutoReturnChange);
     this.returnTimeSelect.addEventListener("change", this.emitChange);
@@ -248,8 +283,82 @@ handleSustainToggle = () => {
      this.emitChange();
    };
 
-   handlePitchWheelDown = () => {
+   handleOctaveBoundsChange = () => {
+     const minValue = parseInt(this.octaveMinSelect.value, 10);
+     const maxValue = parseInt(this.octaveMaxSelect.value, 10);
+     const lowerValue = Math.min(minValue, maxValue);
+     const upperValue = Math.max(minValue, maxValue);
+
+     this.octaveMinSelect.value = String(lowerValue);
+     this.octaveMaxSelect.value = String(upperValue);
+     this.emitChange();
+   };
+
+   handleAutoReturnChange = () => {
+     this.emitChange();
+   };
+
+   handlePitchWheelDown = (event) => {
      this.cancelReturnAnimation();
+
+     const slider = this.pitchWheel.slider;
+     const rect = slider.getBoundingClientRect();
+     const clickY = event.clientY - rect.top;
+     const trackHeight = rect.height;
+     const min = parseFloat(slider.min);
+     const max = parseFloat(slider.max);
+     const currentValue = parseFloat(slider.value);
+     const currentRatio = (currentValue - min) / (max - min);
+     const thumbCenterY = trackHeight - currentRatio * trackHeight;
+     const endBuffer = Math.max(12, trackHeight * 0.04);
+
+     if (Math.abs(clickY - thumbCenterY) > 18) {
+       event.preventDefault();
+       let targetRatio;
+       if (clickY <= endBuffer) {
+         targetRatio = 1;
+       } else if (clickY >= trackHeight - endBuffer) {
+         targetRatio = 0;
+       } else {
+         targetRatio = Math.max(0, Math.min(1, 1 - clickY / trackHeight));
+       }
+
+       const targetValue = min + targetRatio * (max - min);
+       const duration = parseInt(this.returnTimeSelect.value, 10);
+       this.animatePitchToValue(targetValue, duration);
+     }
+   };
+
+   animatePitchToValue = (targetValue, duration) => {
+     this.cancelReturnAnimation();
+
+     const slider = this.pitchWheel.slider;
+     const startValue = parseFloat(slider.value);
+     const delta = targetValue - startValue;
+     const startTime = performance.now();
+
+     if (duration <= 0 || delta === 0) {
+       slider.value = String(targetValue);
+       this.updatePitchValueDisplay();
+       this.emitChange();
+       return;
+     }
+
+     const animate = (currentTime) => {
+       const elapsed = currentTime - startTime;
+       const progress = Math.min(elapsed / duration, 1);
+       slider.value = String(startValue + delta * progress);
+       this.updatePitchValueDisplay();
+       this.emitChange();
+
+       if (progress < 1) {
+         this.returnAnimationId = requestAnimationFrame(animate);
+       } else {
+         this.returnAnimationId = null;
+       }
+     };
+
+     this.returnAnimationId = requestAnimationFrame(animate);
    };
 
    handlePitchBendInput = () => {
@@ -312,6 +421,8 @@ updateVisibility() {
         dataset: this.datasetSelect.value,
         key: this.keySelect.value,
         scale: this.scaleSelect.value,
+        octaveMin: parseInt(this.octaveMinSelect.value, 10),
+        octaveMax: parseInt(this.octaveMaxSelect.value, 10),
         pitchBend: parseFloat(this.pitchWheel.slider.value),
         pitchRange: parseFloat(this.pitchRangeSelect.value),
         pitchAutoReturn: this.autoReturnCheckbox.checked,

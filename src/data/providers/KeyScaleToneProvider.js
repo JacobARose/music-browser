@@ -9,7 +9,12 @@ export class KeyScaleToneProvider {
     const key = options.key ?? "C";
     const scale = options.scale ?? "major";
 
-    const frequencies = getScaleFrequencies(key, scale);
+    const frequencies = getScaleFrequencies(
+      key,
+      scale,
+      options.octaveMin,
+      options.octaveMax
+    );
     const points = [];
 
     if (frequencies.length === 0) {

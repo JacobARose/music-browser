@@ -19,6 +19,12 @@ npm run dev
 - `src/music/`: keys, scales, and frequency utilities.
 - `src/ui/`: control panel for dataset/key/scale selection.
 
+## Stress Testing
+
+![Stress test of audio engine](public/stress-testing-music-browser-app.png)
+
+This image captures a stress test of the audio engine, activating as many simultaneous voices as possible.
+
 ## Point model contract
 
 Visualization and interaction consume normalized points only:

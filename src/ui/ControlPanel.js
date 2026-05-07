@@ -275,9 +275,9 @@ handleSustainToggle = () => {
      slider.min = String(-range);
      slider.max = String(range);
 
-     const currentValue = parseFloat(slider.value);
+     const currentValue = -parseFloat(slider.value);
      const clampedValue = Math.max(Math.min(currentValue, range), -range);
-     slider.value = String(clampedValue);
+     slider.value = String(-clampedValue);
 
      this.updatePitchValueDisplay();
      this.emitChange();
@@ -307,38 +307,49 @@ handleSustainToggle = () => {
      const trackHeight = rect.height;
      const min = parseFloat(slider.min);
      const max = parseFloat(slider.max);
-     const currentValue = parseFloat(slider.value);
+     const currentValue = -parseFloat(slider.value);
      const currentRatio = (currentValue - min) / (max - min);
-     const thumbCenterY = trackHeight - currentRatio * trackHeight;
-     const endBuffer = Math.max(12, trackHeight * 0.04);
+     const thumbHeight = 24;
+     const thumbRadius = thumbHeight / 2;
+     const usableTrackStart = thumbRadius;
+     const usableTrackHeight = trackHeight - thumbHeight;
+     const thumbCenterY = usableTrackStart + (1 - currentRatio) * usableTrackHeight;
+     const thumbTouchTolerance = Math.max(thumbRadius * 1.5, trackHeight * 0.08);
+     const endBuffer = Math.max(12, usableTrackHeight * 0.04);
 
-     if (Math.abs(clickY - thumbCenterY) > 18) {
-       event.preventDefault();
-       let targetRatio;
-       if (clickY <= endBuffer) {
-         targetRatio = 1;
-       } else if (clickY >= trackHeight - endBuffer) {
-         targetRatio = 0;
-       } else {
-         targetRatio = Math.max(0, Math.min(1, 1 - clickY / trackHeight));
-       }
-
-       const targetValue = min + targetRatio * (max - min);
-       const duration = parseInt(this.returnTimeSelect.value, 10);
-       this.animatePitchToValue(targetValue, duration);
+     if (Math.abs(clickY - thumbCenterY) <= thumbTouchTolerance) {
+       return;
      }
+
+     event.preventDefault();
+
+     let targetRatio;
+     if (clickY <= usableTrackStart + endBuffer) {
+       targetRatio = 1;
+     } else if (clickY >= trackHeight - usableTrackStart - endBuffer) {
+       targetRatio = 0;
+     } else {
+       targetRatio = Math.max(
+         0,
+         Math.min(1, 1 - (clickY - usableTrackStart) / usableTrackHeight)
+       );
+     }
+
+     const targetValue = min + targetRatio * (max - min);
+     const duration = parseInt(this.returnTimeSelect.value, 10);
+     this.animatePitchToValue(targetValue, duration);
    };
 
    animatePitchToValue = (targetValue, duration) => {
      this.cancelReturnAnimation();
 
      const slider = this.pitchWheel.slider;
-     const startValue = parseFloat(slider.value);
+     const startValue = -parseFloat(slider.value);
      const delta = targetValue - startValue;
      const startTime = performance.now();
 
      if (duration <= 0 || delta === 0) {
-       slider.value = String(targetValue);
+       slider.value = String(-targetValue);
        this.updatePitchValueDisplay();
        this.emitChange();
        return;
@@ -347,21 +358,20 @@ handleSustainToggle = () => {
      const animate = (currentTime) => {
        const elapsed = currentTime - startTime;
        const progress = Math.min(elapsed / duration, 1);
-       slider.value = String(startValue + delta * progress);
-       this.updatePitchValueDisplay();
-       this.emitChange();
+       slider.value = String(-(startValue + delta * progress));
+    this.updatePitchValueDisplay();
+    this.emitChange();
+    if (progress < 1) {
+      this.returnAnimationId = requestAnimationFrame(animate);
+    } else {
+      this.returnAnimationId = null;
+    }
+  };
 
-       if (progress < 1) {
-         this.returnAnimationId = requestAnimationFrame(animate);
-       } else {
-         this.returnAnimationId = null;
-       }
-     };
+  this.returnAnimationId = requestAnimationFrame(animate);
+  };
 
-     this.returnAnimationId = requestAnimationFrame(animate);
-   };
-
-   handlePitchBendInput = () => {
+  handlePitchBendInput = () => {
      this.cancelReturnAnimation();
      this.updatePitchValueDisplay();
      this.emitChange();
@@ -374,56 +384,56 @@ handleSustainToggle = () => {
      }
    };
 
-handlePitchWheelRelease = () => {
-    if (this.autoReturnCheckbox.checked) {
-      this.cancelReturnAnimation();
-      const startValue = parseFloat(this.pitchWheel.slider.value);
-      const duration = parseInt(this.returnTimeSelect.value);
-      const startTime = performance.now();
+   handlePitchWheelRelease = () => {
+     if (this.autoReturnCheckbox.checked) {
+       this.cancelReturnAnimation();
+       const startValue = -parseFloat(this.pitchWheel.slider.value);
+       const duration = parseInt(this.returnTimeSelect.value, 10);
+       const startTime = performance.now();
 
-      const animate = (currentTime) => {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const newValue = startValue * (1 - progress);
-        this.pitchWheel.slider.value = String(newValue);
-        this.updatePitchValueDisplay();
-        this.emitChange();
+       const animate = (currentTime) => {
+         const elapsed = currentTime - startTime;
+         const progress = Math.min(elapsed / duration, 1);
+         const newValue = startValue * (1 - progress);
+         this.pitchWheel.slider.value = String(-newValue);
+         this.updatePitchValueDisplay();
+         this.emitChange();
 
-        if (progress < 1) {
-          this.returnAnimationId = requestAnimationFrame(animate);
-        } else {
-          this.returnAnimationId = null;
-        }
-      };
+         if (progress < 1) {
+           this.returnAnimationId = requestAnimationFrame(animate);
+         } else {
+           this.returnAnimationId = null;
+         }
+       };
 
-      this.returnAnimationId = requestAnimationFrame(animate);
-    }
-  };
+       this.returnAnimationId = requestAnimationFrame(animate);
+     }
+   };
 
-  updatePitchValueDisplay() {
-    const value = parseFloat(this.pitchWheel.slider.value);
+updatePitchValueDisplay = () => {
+    const value = -parseFloat(this.pitchWheel.slider.value);
     this.pitchWheel.valueDisplay.textContent = `${value.toFixed(2)} st`;
-  }
+  };
 
   emitChange = () => {
     this.updateVisibility();
     this.onChange(this.getValue());
   };
 
-updateVisibility() {
+  updateVisibility = () => {
     const isKeyScale = this.datasetSelect.value === "keyScale";
     this.keySelect.parentElement.style.display = isKeyScale ? "flex" : "none";
     this.scaleSelect.parentElement.style.display = isKeyScale ? "flex" : "none";
-  }
+  };
 
-  getValue() {
+  getValue = () => {
       return {
         dataset: this.datasetSelect.value,
         key: this.keySelect.value,
         scale: this.scaleSelect.value,
         octaveMin: parseInt(this.octaveMinSelect.value, 10),
         octaveMax: parseInt(this.octaveMaxSelect.value, 10),
-        pitchBend: parseFloat(this.pitchWheel.slider.value),
+        pitchBend: -parseFloat(this.pitchWheel.slider.value),
         pitchRange: parseFloat(this.pitchRangeSelect.value),
         pitchAutoReturn: this.autoReturnCheckbox.checked,
         rotationLocked: this.rotationLocked,
@@ -431,5 +441,6 @@ updateVisibility() {
         pitchReturnTime: parseInt(this.returnTimeSelect.value),
         noteDecayTime: parseFloat(this.decayTimeSelect.value),
       };
-    }
-}
+    };
+  }
+

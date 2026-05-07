@@ -156,7 +156,7 @@ select {
   height: 280px;
   -webkit-appearance: none;
   appearance: none;
-  writing-mode: bt-lr;
+  writing-mode: vertical-rl;
   background: transparent;
   cursor: pointer;
   touch-action: none;

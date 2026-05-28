@@ -22,6 +22,6 @@ function injectSocialHeadPlugin() {
 }
 
 export default defineConfig({
-  base: "/music-browser/",
+  base: "/demos/music-browser/",
   plugins: [injectSocialHeadPlugin()],
 });

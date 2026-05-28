@@ -77,6 +77,7 @@ this.root.id = "control-panel";
     this.rotationLocked = false;
     this.sustainActive = false;
     this.returnAnimationId = null;
+    this.pitchWheelIsDragging = false;
 
     this.menuToggleButton = document.createElement("button");
     this.menuToggleButton.type = "button";
@@ -165,10 +166,11 @@ this.root.id = "control-panel";
     this.returnTimeSelect.addEventListener("change", this.emitChange);
     this.decayTimeSelect.addEventListener("change", this.emitChange);
     this.pitchWheel.slider.addEventListener("pointerdown", this.handlePitchWheelDown);
+    this.pitchWheel.slider.addEventListener("pointermove", this.handlePitchWheelMove);
     this.pitchWheel.slider.addEventListener("input", this.handlePitchBendInput);
     this.pitchWheel.slider.addEventListener("pointerup", this.handlePitchWheelRelease);
     this.pitchWheel.slider.addEventListener("pointercancel", this.handlePitchWheelRelease);
-    this.pitchWheel.slider.addEventListener("mouseup", this.handlePitchWheelRelease);
+    this.pitchWheel.slider.addEventListener("touchmove", this.handleTouchMove, { passive: false });
     this.lockNavigationButton.addEventListener("click", this.handleRotationToggle);
     this.sustainButton.addEventListener("click", this.handleSustainToggle);
 
@@ -300,44 +302,62 @@ handleSustainToggle = () => {
 
    handlePitchWheelDown = (event) => {
      this.cancelReturnAnimation();
+     this.pitchWheelIsDragging = true;
+     
+     const slider = this.pitchWheel.slider;
+     if (event.target === slider) {
+       try {
+         event.target.setPointerCapture(event.pointerId);
+       } catch (e) {
+         // ignore capture failures
+       }
+     }
+   };
 
+   handlePitchWheelMove = (event) => {
+     if (!this.pitchWheelIsDragging) {
+       return;
+     }
+     
+     this.cancelReturnAnimation();
+     this._updatePitchWheelFromPointer(event);
+   };
+
+   handleTouchMove = (event) => {
+     if (!this.pitchWheelIsDragging) {
+       return;
+     }
+     
+     event.preventDefault();
+   };
+
+   _updatePitchWheelFromPointer = (event) => {
      const slider = this.pitchWheel.slider;
      const rect = slider.getBoundingClientRect();
-     const clickY = event.clientY - rect.top;
+     const clientY = event.clientY || event.touches?.[0]?.clientY;
+     
+     if (clientY === undefined) {
+       return;
+     }
+     
+     const clickY = clientY - rect.top;
      const trackHeight = rect.height;
      const min = parseFloat(slider.min);
      const max = parseFloat(slider.max);
-     const currentValue = -parseFloat(slider.value);
-     const currentRatio = (currentValue - min) / (max - min);
      const thumbHeight = 24;
      const thumbRadius = thumbHeight / 2;
      const usableTrackStart = thumbRadius;
      const usableTrackHeight = trackHeight - thumbHeight;
-     const thumbCenterY = usableTrackStart + (1 - currentRatio) * usableTrackHeight;
-     const thumbTouchTolerance = Math.max(thumbRadius * 1.5, trackHeight * 0.08);
-     const endBuffer = Math.max(12, usableTrackHeight * 0.04);
 
-     if (Math.abs(clickY - thumbCenterY) <= thumbTouchTolerance) {
-       return;
-     }
-
-     event.preventDefault();
-
-     let targetRatio;
-     if (clickY <= usableTrackStart + endBuffer) {
-       targetRatio = 1;
-     } else if (clickY >= trackHeight - usableTrackStart - endBuffer) {
-       targetRatio = 0;
-     } else {
-       targetRatio = Math.max(
-         0,
-         Math.min(1, 1 - (clickY - usableTrackStart) / usableTrackHeight)
-       );
-     }
+     let targetRatio = Math.max(
+       0,
+       Math.min(1, 1 - (clickY - usableTrackStart) / usableTrackHeight)
+     );
 
      const targetValue = min + targetRatio * (max - min);
-     const duration = parseInt(this.returnTimeSelect.value, 10);
-     this.animatePitchToValue(targetValue, duration);
+     slider.value = String(-targetValue);
+     this.updatePitchValueDisplay();
+     this.emitChange();
    };
 
    animatePitchToValue = (targetValue, duration) => {
@@ -385,6 +405,14 @@ handleSustainToggle = () => {
    };
 
    handlePitchWheelRelease = () => {
+     this.pitchWheelIsDragging = false;
+     
+     try {
+       this.pitchWheel.slider.releasePointerCapture?.(event?.pointerId);
+     } catch (e) {
+       // ignore release failures
+     }
+     
      if (this.autoReturnCheckbox.checked) {
        this.cancelReturnAnimation();
        const startValue = -parseFloat(this.pitchWheel.slider.value);
